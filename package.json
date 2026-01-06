@@ -1,0 +1,13 @@
+{
+  "name": "jarvis",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "start": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' src/jarvis/main.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^25.0.3",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  }
+}
