@@ -1,4 +1,4 @@
-import { JarvisConfig } from "../config"
+import { randomUUID } from "node:crypto"
 
 export type Message = {
     role: "user" | "assistant" | "system"
@@ -6,11 +6,11 @@ export type Message = {
 }
 
 export class Session {
-    private sessionId: string
+    readonly sessionId: string
     private messages: Message[] = []
 
-    constructor(private config: JarvisConfig) {
-        this.sessionId = crypto.randomUUID()
+    constructor() {
+        this.sessionId = randomUUID()
     }
 
     addSystemMessage(text: string) {
@@ -21,7 +21,7 @@ export class Session {
         this.messages.push({ role: "user", content: text })
     }
 
-    addJarvisMessage(text: string) {
+    addAssistantMessage(text: string) {
         this.messages.push({ role: "assistant", content: text })
     }
 

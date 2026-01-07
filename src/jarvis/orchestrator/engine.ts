@@ -21,7 +21,7 @@ export class Orchestrator {
     async handleInput(input: string): Promise<string> {
         this.session.addUserMessage(input)
         const response = await this.llm.chat(this.session.getMessages())
-        this.session.addJarvisMessage(response)
+        this.session.addAssistantMessage(response)
         return response
     }
 }
