@@ -70,6 +70,14 @@ export class FileSessionLogger implements SessionLogger {
     }
   }
 
+  private getTurnId(): string {
+    // Generate a turnId on-demand if not set (for session-level events)
+    if (!this.currentTurnId) {
+      this.currentTurnId = randomUUID()
+    }
+    return this.currentTurnId
+  }
+
   stage(stageName: EventStage): StageLogger {
     return {
       debug: async (type: string, summary: string, data?: Record<string, unknown>) => {
@@ -77,14 +85,14 @@ export class FileSessionLogger implements SessionLogger {
           createEvent({
             id: randomUUID(),
             sessionId: this.sessionId,
-            turnId: this.currentTurnId,
-            spanId: this.currentSpanId || undefined,
-            attempt: this.currentAttempt > 0 ? this.currentAttempt : undefined,
+            turnId: this.getTurnId(),
+            ...(this.currentSpanId && { spanId: this.currentSpanId }),
+            ...(this.currentAttempt > 0 && { attempt: this.currentAttempt }),
             level: "DEBUG",
             stage: stageName,
             type: type as any,
             summary,
-            data,
+            ...(data && { data }),
           })
         )
       },
@@ -93,14 +101,14 @@ export class FileSessionLogger implements SessionLogger {
           createEvent({
             id: randomUUID(),
             sessionId: this.sessionId,
-            turnId: this.currentTurnId,
-            spanId: this.currentSpanId || undefined,
-            attempt: this.currentAttempt > 0 ? this.currentAttempt : undefined,
+            turnId: this.getTurnId(),
+            ...(this.currentSpanId && { spanId: this.currentSpanId }),
+            ...(this.currentAttempt > 0 && { attempt: this.currentAttempt }),
             level: "INFO",
             stage: stageName,
             type: type as any,
             summary,
-            data,
+            ...(data && { data }),
           })
         )
       },
@@ -109,14 +117,14 @@ export class FileSessionLogger implements SessionLogger {
           createEvent({
             id: randomUUID(),
             sessionId: this.sessionId,
-            turnId: this.currentTurnId,
-            spanId: this.currentSpanId || undefined,
-            attempt: this.currentAttempt > 0 ? this.currentAttempt : undefined,
+            turnId: this.getTurnId(),
+            ...(this.currentSpanId && { spanId: this.currentSpanId }),
+            ...(this.currentAttempt > 0 && { attempt: this.currentAttempt }),
             level: "WARN",
             stage: stageName,
             type: type as any,
             summary,
-            data,
+            ...(data && { data }),
           })
         )
       },
@@ -125,14 +133,14 @@ export class FileSessionLogger implements SessionLogger {
           createEvent({
             id: randomUUID(),
             sessionId: this.sessionId,
-            turnId: this.currentTurnId,
-            spanId: this.currentSpanId || undefined,
-            attempt: this.currentAttempt > 0 ? this.currentAttempt : undefined,
+            turnId: this.getTurnId(),
+            ...(this.currentSpanId && { spanId: this.currentSpanId }),
+            ...(this.currentAttempt > 0 && { attempt: this.currentAttempt }),
             level: "ERROR",
             stage: stageName,
             type: type as any,
             summary,
-            data,
+            ...(data && { data }),
           })
         )
       },

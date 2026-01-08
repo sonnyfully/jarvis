@@ -84,12 +84,23 @@ export function normalizeRouterOutput(raw: unknown): { ok: true; decision: Route
     if (!obj.args || typeof obj.args !== "object") {
       return { ok: false, error: "toolCall requires args field" }
     }
-    if (!obj.reason || typeof obj.reason !== "string") {
-      return { ok: false, error: "toolCall requires reason field" }
-    }
+    // Provide default reason if missing or empty
+    const reason = obj.reason && typeof obj.reason === "string" && obj.reason.trim()
+      ? obj.reason.trim()
+      : `Calling ${obj.tool} tool to fulfill user request`
 
-    // Normalize risk field - infer from tool action if missing
-    let risk: "readOnly" | "write" | "destructive" = "readOnly"
+    // Normalize risk field - infer from tool action
+    // First, infer what the risk should be based on the action
+    const action = (obj.args as any)?.action
+    let inferredRisk: "readOnly" | "write" | "destructive" = "readOnly"
+    if (action === "create" || action === "append" || action === "write" || action === "delete") {
+      inferredRisk = "write"
+    } else if (action === "read" || action === "list" || action === "get") {
+      inferredRisk = "readOnly"
+    }
+    
+    // Use provided risk if valid, otherwise use inferred
+    let risk: "readOnly" | "write" | "destructive" = inferredRisk
     if (obj.risk) {
       const riskLower = obj.risk.toLowerCase()
       if (riskLower === "readonly" || riskLower === "read_only") {
@@ -99,13 +110,10 @@ export function normalizeRouterOutput(raw: unknown): { ok: true; decision: Route
       } else if (riskLower === "destructive") {
         risk = "destructive"
       }
-    } else {
-      // Infer risk from tool action
-      const action = (obj.args as any)?.action
-      if (action === "create" || action === "append" || action === "write" || action === "delete") {
+      // If the provided risk doesn't match the inferred risk for write actions, override it
+      // (e.g., if action is "create" but risk is "readOnly", use "write")
+      if ((action === "create" || action === "append" || action === "write") && risk === "readOnly") {
         risk = "write"
-      } else if (action === "read" || action === "list" || action === "get") {
-        risk = "readOnly"
       }
     }
 
@@ -115,7 +123,7 @@ export function normalizeRouterOutput(raw: unknown): { ok: true; decision: Route
         type: "toolCall",
         tool: obj.tool,
         args: obj.args,
-        reason: obj.reason,
+        reason,
         risk,
       },
     }

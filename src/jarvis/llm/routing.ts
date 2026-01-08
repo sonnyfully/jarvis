@@ -1,5 +1,5 @@
-import { Ollamaclient } from "./ollamaClient"
-import { JarvisConfig } from "../config"
+import type { LLMClient } from "./base"
+import type { JarvisConfig } from "../config"
 
 export type LLMMode = "router" | "thinker"
 
@@ -11,7 +11,10 @@ export type GenerationParams = {
 }
 
 export function getModelForMode(config: JarvisConfig, mode: LLMMode): string {
-    return mode === "router" ? config.ollamaModel : config.ollamaModel
+    if (config.llmProvider === "openai") {
+        return config.openaiModel || "gpt-4o-mini"
+    }
+    return config.ollamaModel
 }
 
 export function getParamsForMode(mode: LLMMode): GenerationParams {
@@ -30,7 +33,7 @@ export function getParamsForMode(mode: LLMMode): GenerationParams {
 
 export async function runLLM(args: {
     config: JarvisConfig
-    client: Ollamaclient
+    client: LLMClient
     mode: LLMMode
     messages: { role: "user" | "assistant" | "system", content: string }[]
 }): Promise<{text: string; model: string}> {

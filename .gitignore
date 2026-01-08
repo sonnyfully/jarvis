@@ -34,3 +34,4 @@ Thumbs.db
 # Project specific
 project-context.md
 data/logs/*.jsonl
+data/notes/*.md

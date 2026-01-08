@@ -60,9 +60,36 @@ export class Ollamaclient implements LLMClient {
     }
 
     const data = await response.json()
-    if (!data.message || !data.message.content) {
-      throw new Error(`Invalid response from Ollama: missing message content`)
+    
+    // Handle different possible response structures
+    let content: string | undefined
+    
+    // Standard structure: { message: { content: "..." } }
+    if (data.message?.content) {
+      content = data.message.content
     }
-    return data.message.content
+    // Alternative structure: { content: "..." }
+    else if (data.content) {
+      content = data.content
+    }
+    // Check if there's an error in the response
+    else if (data.error) {
+      throw new Error(`Ollama API returned an error: ${data.error}`)
+    }
+    
+    if (!content || content.trim().length === 0) {
+      // Log the actual response for debugging
+      console.error("Unexpected Ollama response structure:", JSON.stringify(data, null, 2))
+      
+      // If we have a done_reason, include it in the error
+      const doneReason = data.done_reason ? ` (done_reason: ${data.done_reason})` : ""
+      throw new Error(
+        `Invalid response from Ollama: empty or missing message content${doneReason}. ` +
+        `This usually means the model stopped generating early or the prompt was unclear. ` +
+        `Response structure: ${JSON.stringify(data).substring(0, 200)}`
+      )
+    }
+    
+    return content
   }
 }

@@ -53,14 +53,14 @@ export function createEvent(params: {
     id: params.id,
     sessionId: params.sessionId,
     turnId: params.turnId,
-    spanId: params.spanId,
-    attempt: params.attempt,
+    ...(params.spanId !== undefined && { spanId: params.spanId }),
+    ...(params.attempt !== undefined && { attempt: params.attempt }),
     ts: new Date().toISOString(),
     level: params.level,
     stage: params.stage,
     type: params.type,
     summary: params.summary,
-    data: params.data,
+    ...(params.data !== undefined && { data: params.data }),
   }
 }
 

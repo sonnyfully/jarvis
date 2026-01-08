@@ -6,6 +6,7 @@
     "start": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' src/jarvis/main.ts"
   },
   "dependencies": {
+    "dotenv": "^17.2.3",
     "zod": "^3.22.4"
   },
   "devDependencies": {

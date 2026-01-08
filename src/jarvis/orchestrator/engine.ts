@@ -1,5 +1,5 @@
 import { JarvisConfig } from "../config"
-import { Ollamaclient } from "../llm/ollamaClient"
+import type { LLMClient } from "../llm/base"
 import { buildSystemPrompt } from "./prompts"
 import { Session } from "./session"
 import { tools, toolByName } from "../tools/registry"
@@ -15,13 +15,13 @@ import { stdin as input, stdout as output } from "node:process"
 export class Orchestrator {
     
     private session: Session
-    private llm: Ollamaclient
+    private llm: LLMClient
     private readline: ReturnType<typeof createInterface> | null = null
     private logger: FileSessionLogger | null = null
     
-    constructor(private config: JarvisConfig) {
+    constructor(private config: JarvisConfig, llmClient: LLMClient) {
         this.session = new Session()
-        this.llm = new Ollamaclient(config.ollamaBaseUrl)
+        this.llm = llmClient
     }
     
     async initialize() {
@@ -109,22 +109,60 @@ export class Orchestrator {
     ): Promise<string> {
         const messages = this.session.getMessages()
         
-        let contextMessage = ""
+        // Build tool result context message
+        let toolContextMessage = ""
         if (decision.type === "toolCall" && toolResult) {
             if (toolResult.ok) {
-                contextMessage = `Tool "${decision.tool}" executed successfully. Result: ${JSON.stringify(toolResult.result)}`
+                const resultStr = typeof toolResult.result === "string" 
+                    ? toolResult.result 
+                    : JSON.stringify(toolResult.result, null, 2)
+                toolContextMessage = `The tool "${decision.tool}" has been executed successfully. Here is the result:\n\n${resultStr}\n\nNow provide a clear, natural language response to the user based on this result.`
             } else {
-                contextMessage = `Tool "${decision.tool}" failed. Error: ${toolResult.error}`
+                toolContextMessage = `The tool "${decision.tool}" failed with error: ${toolResult.error}\n\nExplain this to the user and suggest what to do next.`
             }
         }
 
-        const responseMessages = [
-            ...messages,
-            { role: "user" as const, content: userInput },
-        ]
+        // Build response messages with proper ordering: system messages first, then conversation
+        const responseMessages: Array<{ role: "system" | "user" | "assistant"; content: string }> = []
+        
+        // Separate system messages from conversation messages
+        const systemMessages: Array<{ role: "system"; content: string }> = []
+        const conversationMessages: Array<{ role: "user" | "assistant"; content: string }> = []
+        
+        // Process existing messages (excluding the last user message to avoid duplication)
+        const existingMessages = messages.slice(0, -1)
+        for (const msg of existingMessages) {
+            if (msg.role === "system") {
+                systemMessages.push({ role: "system", content: msg.content })
+            } else {
+                conversationMessages.push({ role: msg.role, content: msg.content })
+            }
+        }
+        
+        // Add system messages first
+        responseMessages.push(...systemMessages)
+        
+        // Add tool context as a system message if we have it
+        if (toolContextMessage) {
+            responseMessages.push({ role: "system", content: toolContextMessage })
+        }
+        
+        // Add conversation history
+        responseMessages.push(...conversationMessages)
+        
+        // Add the current user input
+        responseMessages.push({ role: "user", content: userInput })
 
-        if (contextMessage) {
-            responseMessages.push({ role: "system" as const, content: contextMessage })
+        // Ensure we have at least one message
+        if (responseMessages.length === 0) {
+            throw new Error("Cannot generate response: no messages available")
+        }
+
+        // Validate all messages have content
+        for (const msg of responseMessages) {
+            if (!msg.content || typeof msg.content !== "string" || msg.content.trim().length === 0) {
+                throw new Error(`Invalid message: empty or missing content. Message: ${JSON.stringify(msg)}`)
+            }
         }
 
         const response = await this.llm.chat({
@@ -253,5 +291,14 @@ export class Orchestrator {
         await engine.info("turn.completed", "Turn completed", {})
         
         return finalResponse
+    }
+
+    async close(): Promise<void> {
+        if (this.logger) {
+            await this.logger.close()
+        }
+        if (this.readline) {
+            this.readline.close()
+        }
     }
 }
