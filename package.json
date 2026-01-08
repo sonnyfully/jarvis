@@ -5,6 +5,9 @@
   "scripts": {
     "start": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' src/jarvis/main.ts"
   },
+  "dependencies": {
+    "zod": "^3.22.4"
+  },
   "devDependencies": {
     "@types/node": "^25.0.3",
     "ts-node": "^10.9.2",

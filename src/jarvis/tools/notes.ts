@@ -83,5 +83,8 @@ export const notesTool: ToolDef = {
             await fs.appendFile(p, "\n" + args.content.trim() + '\n', 'utf-8')
             return { ok: true, result: {title: args.title} }
         }
+
+        // TypeScript exhaustiveness check - this should never be reached
+        return { ok: false, error: `Unhandled action: ${action}` }
     }
 }
